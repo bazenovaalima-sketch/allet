@@ -6,13 +6,8 @@ import './App.css';
 const URL_REGEX = /(https?:\/\/[^\s\n\r]+)(?=[\s\n\r]|$)/g;
 
 const VIDEO_PLATFORMS = [
-  'youtube.com', 'youtu.be',
   'instagram.com', 'instagr.am',
-  'tiktok.com', 'vm.tiktok.com',
-  'twitter.com', 'x.com', 't.co',
-  'vimeo.com', 'twitch.tv',
-  'reddit.com', 'facebook.com', 'fb.com',
-  'dailymotion.com', 'ok.ru', 'vk.com',
+  'tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com',
 ];
 
 const isVideoUrl = (url: string) => VIDEO_PLATFORMS.some(p => url.toLowerCase().includes(p));
@@ -54,7 +49,9 @@ const VideoItem = React.memo(({ attachment, onDelete }: { attachment: Attachment
       </div>
       <div className="ios-video-body">
         {attachment.status === 'completed' && attachment.local_path ? (
-          <video controls src={attachment.local_path!} className="ios-video-element" />
+          <video controls crossOrigin="anonymous" className="ios-video-element" playsInline>
+            <source src={attachment.local_path} type="video/mp4" />
+          </video>
         ) : (
           <div className="ios-video-loading">
             <div className="ios-spinner"></div>

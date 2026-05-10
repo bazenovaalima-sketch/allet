@@ -316,12 +316,17 @@
 
 .ios-video-body {
   background: #000;
-  aspect-ratio: 16/9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-height: 560px;
+  overflow: hidden;
 }
 
 .ios-video-element {
   width: 100%;
-  height: 100%;
+  height: auto;
+  max-height: 560px;
   display: block;
 }
 

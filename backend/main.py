@@ -35,13 +35,8 @@ def get_r2():
     )
 
 VIDEO_PLATFORMS = [
-    'youtube.com', 'youtu.be',
     'instagram.com', 'instagr.am',
-    'tiktok.com', 'vm.tiktok.com',
-    'twitter.com', 'x.com', 't.co',
-    'vimeo.com', 'twitch.tv',
-    'reddit.com', 'facebook.com', 'fb.com',
-    'dailymotion.com', 'ok.ru', 'vk.com',
+    'tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com',
 ]
 
 def is_video_url(url: str) -> bool:
