@@ -65,7 +65,7 @@ function App() {
   const [editName, setEditName] = useState('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
 
-  const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRefs = useRef<{[key: number]: HTMLTextAreaElement | null}>({});
 
   useEffect(() => { fetchCategories(); }, []);
@@ -302,7 +302,7 @@ function App() {
                   return (
                     <textarea
                       key={index}
-                      ref={el => textareaRefs.current[index] = el}
+                      ref={el => { textareaRefs.current[index] = el; }}
                       className="ios-textarea"
                       value={part}
                       onChange={(e) => handleTextChange(index, e.target.value)}
