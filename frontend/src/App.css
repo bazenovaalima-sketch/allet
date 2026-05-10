@@ -209,10 +209,26 @@
 .ios-note-toolbar {
   position: absolute;
   top: 40px;
+  left: 48px;
   right: 48px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   pointer-events: none;
+}
+
+.ios-back-btn {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--ios-accent);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  pointer-events: all;
+  padding: 4px 0;
 }
 
 .ios-save-indicator {
@@ -398,5 +414,67 @@
   }
   .ios-note-sheet {
     padding: 60px 32px;
+  }
+}
+
+/* Mobile layout */
+@media (max-width: 768px) {
+  .ios-container {
+    position: relative;
+  }
+
+  .ios-sidebar {
+    width: 100vw;
+    min-width: unset;
+    border-right: none;
+    padding: 20px 16px;
+  }
+
+  .ios-note-view {
+    position: absolute;
+    inset: 0;
+    width: 100vw;
+  }
+
+  /* Show list, hide note */
+  .mobile-list .ios-sidebar { display: flex; }
+  .mobile-list .ios-note-view { display: none; }
+
+  /* Show note, hide list */
+  .mobile-note .ios-sidebar { display: none; }
+  .mobile-note .ios-note-view { display: flex; }
+
+  .ios-back-btn {
+    display: flex;
+  }
+
+  .ios-note-toolbar {
+    top: 16px;
+    left: 16px;
+    right: 16px;
+  }
+
+  .ios-note-sheet {
+    padding: 60px 20px 40px;
+  }
+
+  .ios-note-title {
+    font-size: 26px;
+  }
+
+  .ios-textarea {
+    font-size: 16px;
+  }
+
+  .ios-video-card {
+    max-width: 100%;
+  }
+
+  .ios-app-branding {
+    display: none;
+  }
+
+  .ios-sidebar-header h1 {
+    font-size: 28px;
   }
 }
