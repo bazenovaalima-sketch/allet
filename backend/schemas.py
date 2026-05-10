@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import datetime
 
 class AttachmentBase(BaseModel):
     original_url: str
@@ -24,6 +25,7 @@ class NoteCreate(NoteBase):
 class Note(NoteBase):
     id: int
     attachments: List[Attachment] = []
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

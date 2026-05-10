@@ -67,6 +67,7 @@ function App() {
   const [editName, setEditName] = useState('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
   const [mobileView, setMobileView] = useState<'list' | 'note'>('list');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRefs = useRef<{[key: number]: HTMLTextAreaElement | null}>({});
@@ -150,6 +151,16 @@ function App() {
     });
   }, [currentNote?.id]);
 
+  const visibleCategories = useMemo(() => {
+    const sorted = [...categories].sort((a, b) => {
+      const aTime = a.notes[0]?.updated_at ? new Date(a.notes[0].updated_at).getTime() : 0;
+      const bTime = b.notes[0]?.updated_at ? new Date(b.notes[0].updated_at).getTime() : 0;
+      return bTime - aTime;
+    });
+    if (!searchQuery.trim()) return sorted;
+    return sorted.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [categories, searchQuery]);
+
   const parts = useMemo(() => {
     const raw = localContent.split(URL_REGEX);
     return raw.map((p, i) => {
@@ -207,6 +218,15 @@ function App() {
           </button>
         </div>
 
+        <div className="ios-search-container">
+          <input
+            className="ios-search-input"
+            placeholder="Поиск..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+
         {isAddingCategory && (
           <div className="ios-cat-input-container">
             <input 
@@ -232,7 +252,7 @@ function App() {
         )}
 
         <div className="ios-cat-list">
-          {categories.map(c => (
+          {visibleCategories.map(c => (
             <div 
               key={c.id} 
               className={`ios-cat-item ${selectedCategoryId === c.id ? 'active' : ''}`}

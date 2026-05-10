@@ -10,10 +10,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 
+from sqlalchemy import text
 from . import models, schemas, database
 from .database import engine, get_db
 
 models.Base.metadata.create_all(bind=engine)
+
+# Migration: add updated_at to existing notes table
+try:
+    with engine.connect() as conn:
+        conn.execute(text(
+            "ALTER TABLE notes ADD COLUMN IF NOT EXISTS "
+            "updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
+        ))
+        conn.commit()
+except Exception:
+    pass
 
 app = FastAPI()
 

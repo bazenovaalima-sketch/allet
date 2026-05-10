@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from .database import Base
 
 class Category(Base):
@@ -17,6 +18,7 @@ class Note(Base):
     title = Column(String, index=True)
     content = Column(Text)
     category_id = Column(Integer, ForeignKey("categories.id"))
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     category = relationship("Category", back_populates="notes")
     attachments = relationship("Attachment", back_populates="note", cascade="all, delete-orphan")
@@ -28,6 +30,6 @@ class Attachment(Base):
     note_id = Column(Integer, ForeignKey("notes.id"))
     original_url = Column(String)
     local_path = Column(String, nullable=True)
-    status = Column(String, default="pending")  # pending, downloading, completed, failed
+    status = Column(String, default="pending")
 
     note = relationship("Note", back_populates="attachments")

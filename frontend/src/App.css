@@ -60,6 +60,26 @@
   background-color: rgba(0, 0, 0, 0.05);
 }
 
+.ios-search-container {
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+
+.ios-search-input {
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background: rgba(0,0,0,0.06);
+  color: var(--ios-text);
+}
+
+.ios-search-input::placeholder {
+  color: var(--ios-placeholder);
+}
+
 .ios-cat-input-container {
   margin-bottom: 12px;
   padding: 0 4px;

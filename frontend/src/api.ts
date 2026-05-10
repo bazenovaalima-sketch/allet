@@ -20,6 +20,7 @@ export interface Note {
   content: string;
   category_id: number;
   attachments: Attachment[];
+  updated_at: string | null;
 }
 
 export const api = {
