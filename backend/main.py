@@ -106,8 +106,13 @@ def sync_note(note_data: schemas.NoteCreate, background_tasks: BackgroundTasks, 
         db_note.content = note_data.content
 
     db_cat = db.query(models.Category).filter(models.Category.id == note_data.category_id).first()
-    if db_cat:
-        db_cat.name = note_data.title
+    if db_cat and db_cat.name != note_data.title:
+        name_taken = db.query(models.Category).filter(
+            models.Category.name == note_data.title,
+            models.Category.id != note_data.category_id
+        ).first()
+        if not name_taken:
+            db_cat.name = note_data.title
 
     db.commit()
     db.refresh(db_note)
