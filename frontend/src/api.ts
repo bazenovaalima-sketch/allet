@@ -5,6 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 export interface Category {
   id: number;
   name: string;
+  notes: Note[];
 }
 
 export interface Attachment {
