@@ -33,6 +33,9 @@ def get_r2():
         region_name="auto",
     )
 
+MAX_DURATION_SECONDS = 600   # 10 minutes
+MAX_FILESIZE_BYTES = 150 * 1024 * 1024  # 150 MB
+
 def download_video(attachment_id: int, url: str):
     db = database.SessionLocal()
     attachment = db.query(models.Attachment).filter(models.Attachment.id == attachment_id).first()
@@ -43,16 +46,32 @@ def download_video(attachment_id: int, url: str):
     attachment.status = "downloading"
     db.commit()
 
+    # Check duration before downloading
+    try:
+        with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+            duration = info.get('duration') or 0
+            print(f"Video duration: {duration}s, url: {url}")
+            if duration > MAX_DURATION_SECONDS:
+                print(f"Video too long ({duration}s), skipping download")
+                attachment.status = "too_long"
+                db.commit()
+                db.close()
+                return
+    except Exception as e:
+        print(f"Could not check duration, proceeding: {e}")
+
     filename = f"{uuid.uuid4()}.mp4"
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             ydl_opts = {
-                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+                'format': 'best[height<=480][ext=mp4]/best[height<=480]/bestvideo[height<=480]+bestaudio/best',
                 'outtmpl': os.path.join(tmpdir, 'video.%(ext)s'),
                 'merge_output_format': 'mp4',
-                'quiet': True,
-                'no_warnings': True,
+                'max_filesize': MAX_FILESIZE_BYTES,
+                'quiet': False,
+                'no_warnings': False,
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -61,12 +80,19 @@ def download_video(attachment_id: int, url: str):
             files = [f for f in os.listdir(tmpdir)
                      if os.path.isfile(os.path.join(tmpdir, f)) and not f.endswith('.part')]
             if not files:
-                raise Exception("No file downloaded")
+                raise Exception("No file found after download")
 
             actual_path = os.path.join(tmpdir, files[0])
+            filesize = os.path.getsize(actual_path)
+            print(f"Downloaded: {files[0]}, size: {filesize} bytes")
+
+            if filesize == 0:
+                raise Exception("Downloaded file is empty")
+
             r2 = get_r2()
             r2.upload_file(actual_path, os.getenv("R2_BUCKET_NAME"), filename,
                            ExtraArgs={"ContentType": "video/mp4"})
+            print(f"Uploaded to R2: {filename}")
 
         attachment.local_path = f"{os.getenv('R2_PUBLIC_URL')}/{filename}"
         attachment.status = "completed"

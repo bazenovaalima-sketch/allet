@@ -306,6 +306,16 @@ function App() {
                   const url = part.trim();
                   const att = currentNote?.attachments.find(a => a.original_url === url);
                   if (!att) return <div key={index} className="ios-video-pending-bar">Поиск...</div>;
+                  if (att.status === 'too_long') {
+                    return (
+                      <div key={att.id} className="ios-link-item">
+                        <a href={att.original_url} target="_blank" rel="noopener noreferrer" className="ios-link-url">
+                          {att.original_url}
+                        </a>
+                        <span className="ios-link-note">Видео слишком длинное — откройте по ссылке</span>
+                      </div>
+                    );
+                  }
                   return <VideoItem key={att.id} attachment={att} onDelete={handleDeleteVideo} />;
                 } else {
                   return (

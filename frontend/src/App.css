@@ -358,6 +358,33 @@
   border: 1px solid var(--ios-border);
 }
 
+.ios-link-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  background: var(--ios-sidebar);
+  border-radius: 12px;
+  border: 1px solid var(--ios-border);
+  margin: 8px 0;
+}
+
+.ios-link-url {
+  font-size: 14px;
+  color: var(--ios-accent);
+  word-break: break-all;
+  text-decoration: none;
+}
+
+.ios-link-url:hover {
+  text-decoration: underline;
+}
+
+.ios-link-note {
+  font-size: 11px;
+  color: var(--ios-sec-text);
+}
+
 /* Responsive adjustments */
 @media (max-width: 1024px) {
   .ios-sidebar {

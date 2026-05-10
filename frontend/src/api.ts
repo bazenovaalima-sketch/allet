@@ -11,7 +11,7 @@ export interface Attachment {
   id: number;
   original_url: string;
   local_path: string | null;
-  status: 'pending' | 'downloading' | 'completed' | 'failed';
+  status: 'pending' | 'downloading' | 'completed' | 'failed' | 'too_long';
 }
 
 export interface Note {
