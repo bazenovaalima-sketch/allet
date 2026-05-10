@@ -2,6 +2,7 @@ import os
 import re
 import uuid
 import tempfile
+import base64
 import yt_dlp
 import boto3
 from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
@@ -36,6 +37,33 @@ def get_r2():
 MAX_DURATION_SECONDS = 600   # 10 minutes
 MAX_FILESIZE_BYTES = 150 * 1024 * 1024  # 150 MB
 
+# yt-dlp options that help bypass YouTube bot detection
+YDL_BASE_OPTS = {
+    'quiet': False,
+    'no_warnings': False,
+    'extractor_args': {
+        'youtube': {
+            'player_client': ['ios', 'android_music'],
+        }
+    },
+}
+
+def _cookie_file():
+    """Write YOUTUBE_COOKIES env var (base64) to a temp file, return path or None."""
+    raw = os.getenv("YOUTUBE_COOKIES")
+    if not raw:
+        return None
+    try:
+        content = base64.b64decode(raw).decode('utf-8')
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
+        f.write(content)
+        f.flush()
+        f.close()
+        return f.name
+    except Exception as e:
+        print(f"Cookie file error: {e}")
+        return None
+
 def download_video(attachment_id: int, url: str):
     db = database.SessionLocal()
     attachment = db.query(models.Attachment).filter(models.Attachment.id == attachment_id).first()
@@ -46,17 +74,27 @@ def download_video(attachment_id: int, url: str):
     attachment.status = "downloading"
     db.commit()
 
+    cookie_path = _cookie_file()
+
+    def make_opts(extra: dict) -> dict:
+        opts = {**YDL_BASE_OPTS, **extra}
+        if cookie_path:
+            opts['cookiefile'] = cookie_path
+        return opts
+
     # Check duration before downloading
     try:
-        with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
+        with yt_dlp.YoutubeDL(make_opts({'quiet': True, 'no_warnings': True})) as ydl:
             info = ydl.extract_info(url, download=False)
             duration = info.get('duration') or 0
-            print(f"Video duration: {duration}s, url: {url}")
+            print(f"Video duration: {duration}s")
             if duration > MAX_DURATION_SECONDS:
-                print(f"Video too long ({duration}s), skipping download")
+                print(f"Too long ({duration}s), skipping")
                 attachment.status = "too_long"
                 db.commit()
                 db.close()
+                if cookie_path:
+                    os.remove(cookie_path)
                 return
     except Exception as e:
         print(f"Could not check duration, proceeding: {e}")
@@ -65,14 +103,12 @@ def download_video(attachment_id: int, url: str):
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
-            ydl_opts = {
+            ydl_opts = make_opts({
                 'format': 'best[height<=480][ext=mp4]/best[height<=480]/bestvideo[height<=480]+bestaudio/best',
                 'outtmpl': os.path.join(tmpdir, 'video.%(ext)s'),
                 'merge_output_format': 'mp4',
                 'max_filesize': MAX_FILESIZE_BYTES,
-                'quiet': False,
-                'no_warnings': False,
-            }
+            })
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
@@ -99,6 +135,9 @@ def download_video(attachment_id: int, url: str):
     except Exception as e:
         print(f"Error downloading {url}: {e}")
         attachment.status = "failed"
+    finally:
+        if cookie_path and os.path.exists(cookie_path):
+            os.remove(cookie_path)
 
     db.commit()
     db.close()
