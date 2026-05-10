@@ -69,6 +69,7 @@ function App() {
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRefs = useRef<{[key: number]: HTMLTextAreaElement | null}>({});
+  const pendingNoteTitle = useRef<string | null>(null);
 
   useEffect(() => { fetchCategories(); }, []);
   useEffect(() => { if (selectedCategoryId) loadNote(selectedCategoryId); }, [selectedCategoryId]);
@@ -89,9 +90,11 @@ function App() {
         setLocalTitle(note.title);
         setLocalContent(note.content);
       } else {
-        const newNote = await api.syncNote({ title: 'Без названия', content: '', category_id: catId });
+        const title = pendingNoteTitle.current || 'Без названия';
+        pendingNoteTitle.current = null;
+        const newNote = await api.syncNote({ title, content: '', category_id: catId });
         setCurrentNote(newNote.data);
-        setLocalTitle('Без названия');
+        setLocalTitle(title);
         setLocalContent('');
       }
       setSaveStatus('saved');
@@ -211,7 +214,10 @@ function App() {
               placeholder="Новая заметка"
               onKeyDown={e => {
                 if (e.key === 'Enter') {
-                  api.createCategory(e.currentTarget.value).then(res => {
+                  const name = e.currentTarget.value.trim();
+                  if (!name) return;
+                  pendingNoteTitle.current = name;
+                  api.createCategory(name).then(res => {
                     setIsAddingCategory(false);
                     fetchCategories();
                     setSelectedCategoryId(res.data.id);
