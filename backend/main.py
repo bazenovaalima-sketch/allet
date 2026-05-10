@@ -45,33 +45,34 @@ def download_video(attachment_id: int, url: str):
 
     filename = f"{uuid.uuid4()}.mp4"
 
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
-        tmppath = tmp.name
-
-    ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-        'outtmpl': tmppath,
-        'quiet': True,
-        'no_warnings': True,
-    }
-
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ydl_opts = {
+                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+                'outtmpl': os.path.join(tmpdir, 'video.%(ext)s'),
+                'merge_output_format': 'mp4',
+                'quiet': True,
+                'no_warnings': True,
+            }
 
-        r2 = get_r2()
-        bucket = os.getenv("R2_BUCKET_NAME")
-        r2.upload_file(tmppath, bucket, filename, ExtraArgs={"ContentType": "video/mp4"})
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
 
-        public_url = f"{os.getenv('R2_PUBLIC_URL')}/{filename}"
-        attachment.local_path = public_url
+            files = [f for f in os.listdir(tmpdir)
+                     if os.path.isfile(os.path.join(tmpdir, f)) and not f.endswith('.part')]
+            if not files:
+                raise Exception("No file downloaded")
+
+            actual_path = os.path.join(tmpdir, files[0])
+            r2 = get_r2()
+            r2.upload_file(actual_path, os.getenv("R2_BUCKET_NAME"), filename,
+                           ExtraArgs={"ContentType": "video/mp4"})
+
+        attachment.local_path = f"{os.getenv('R2_PUBLIC_URL')}/{filename}"
         attachment.status = "completed"
     except Exception as e:
         print(f"Error downloading {url}: {e}")
         attachment.status = "failed"
-    finally:
-        if os.path.exists(tmppath):
-            os.remove(tmppath)
 
     db.commit()
     db.close()

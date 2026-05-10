@@ -135,6 +135,15 @@ function App() {
     return () => clearInterval(interval);
   }, [currentNote?.attachments, currentNote?.id]);
 
+  useEffect(() => {
+    Object.values(textareaRefs.current).forEach(el => {
+      if (el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      }
+    });
+  }, [currentNote?.id]);
+
   const parts = useMemo(() => {
     const raw = localContent.split(URL_REGEX);
     return raw.map((p, i) => {
