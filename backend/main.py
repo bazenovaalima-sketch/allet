@@ -57,7 +57,7 @@ YDL_BASE_OPTS = {
     'no_warnings': False,
     'extractor_args': {
         'youtube': {
-            'player_client': ['ios', 'android_music'],
+            'player_client': ['web', 'android', 'tv_embedded'],
         }
     },
 }
