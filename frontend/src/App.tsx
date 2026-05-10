@@ -5,6 +5,18 @@ import './App.css';
 
 const URL_REGEX = /(https?:\/\/[^\s\n\r]+)(?=[\s\n\r]|$)/g;
 
+const VIDEO_PLATFORMS = [
+  'youtube.com', 'youtu.be',
+  'instagram.com', 'instagr.am',
+  'tiktok.com', 'vm.tiktok.com',
+  'twitter.com', 'x.com', 't.co',
+  'vimeo.com', 'twitch.tv',
+  'reddit.com', 'facebook.com', 'fb.com',
+  'dailymotion.com', 'ok.ru', 'vk.com',
+];
+
+const isVideoUrl = (url: string) => VIDEO_PLATFORMS.some(p => url.toLowerCase().includes(p));
+
 // Simple SVG Icons
 const IconFolder = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -304,6 +316,13 @@ function App() {
                 const isUrl = part.match(/https?:\/\/[^\s\n\r]+/);
                 if (isUrl) {
                   const url = part.trim();
+                  if (!isVideoUrl(url)) {
+                    return (
+                      <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="ios-plain-link">
+                        {url}
+                      </a>
+                    );
+                  }
                   const att = currentNote?.attachments.find(a => a.original_url === url);
                   if (!att) return <div key={index} className="ios-video-pending-bar">Поиск...</div>;
                   if (att.status === 'too_long') {

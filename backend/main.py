@@ -34,6 +34,20 @@ def get_r2():
         region_name="auto",
     )
 
+VIDEO_PLATFORMS = [
+    'youtube.com', 'youtu.be',
+    'instagram.com', 'instagr.am',
+    'tiktok.com', 'vm.tiktok.com',
+    'twitter.com', 'x.com', 't.co',
+    'vimeo.com', 'twitch.tv',
+    'reddit.com', 'facebook.com', 'fb.com',
+    'dailymotion.com', 'ok.ru', 'vk.com',
+]
+
+def is_video_url(url: str) -> bool:
+    lower = url.lower()
+    return any(p in lower for p in VIDEO_PLATFORMS)
+
 MAX_DURATION_SECONDS = 600   # 10 minutes
 MAX_FILESIZE_BYTES = 150 * 1024 * 1024  # 150 MB
 
@@ -188,6 +202,8 @@ def sync_note(note_data: schemas.NoteCreate, background_tasks: BackgroundTasks, 
 
     existing_att = {a.original_url: a for a in db_note.attachments}
     for url in normalized_urls:
+        if not is_video_url(url):
+            continue
         if url not in existing_att:
             new_att = models.Attachment(note_id=db_note.id, original_url=url, status="pending")
             db.add(new_att)
