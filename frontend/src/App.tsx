@@ -49,7 +49,7 @@ const VideoItem = React.memo(({ attachment, onDelete }: { attachment: Attachment
       </div>
       <div className="ios-video-body">
         {attachment.status === 'completed' && attachment.local_path ? (
-          <video controls crossOrigin="anonymous" className="ios-video-element" playsInline>
+          <video controls playsInline className="ios-video-element">
             <source src={attachment.local_path} type="video/mp4" />
           </video>
         ) : (

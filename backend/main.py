@@ -139,7 +139,8 @@ def download_video(attachment_id: int, url: str):
                            ExtraArgs={"ContentType": "video/mp4"})
             print(f"Uploaded to R2: {filename}")
 
-        attachment.local_path = f"{os.getenv('R2_PUBLIC_URL')}/{filename}"
+        public_url = os.getenv('R2_PUBLIC_URL', '').strip().rstrip('/')
+        attachment.local_path = f"{public_url}/{filename}"
         attachment.status = "completed"
     except Exception as e:
         print(f"Error downloading {url}: {e}")
