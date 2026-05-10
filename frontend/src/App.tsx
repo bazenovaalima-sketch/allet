@@ -3,14 +3,7 @@ import { api } from './api';
 import type { Category, Note, Attachment } from './api';
 import './App.css';
 
-const URL_REGEX = /(https?:\/\/[^\s\n\r]+)(?=[\s\n\r]|$)/g;
-
-const VIDEO_PLATFORMS = [
-  'instagram.com', 'instagr.am',
-  'tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com',
-];
-
-const isVideoUrl = (url: string) => VIDEO_PLATFORMS.some(p => url.toLowerCase().includes(p));
+const URL_REGEX = /(https?:\/\/(?:[a-z0-9-]+\.)?(?:instagram\.com|instagr\.am|tiktok\.com)[^\s\n\r]*)(?=[\s\n\r]|$)/gi;
 
 // Simple SVG Icons
 const IconFolder = () => (
@@ -310,16 +303,9 @@ function App() {
 
             <div className="ios-note-flow">
               {parts.map((part, index) => {
-                const isUrl = part.match(/https?:\/\/[^\s\n\r]+/);
+                const isUrl = /^https?:\/\//.test(part);
                 if (isUrl) {
                   const url = part.trim();
-                  if (!isVideoUrl(url)) {
-                    return (
-                      <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="ios-plain-link">
-                        {url}
-                      </a>
-                    );
-                  }
                   const att = currentNote?.attachments.find(a => a.original_url === url);
                   if (!att) return <div key={index} className="ios-video-pending-bar">Поиск...</div>;
                   if (att.status === 'too_long') {

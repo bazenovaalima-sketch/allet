@@ -46,15 +46,9 @@ def is_video_url(url: str) -> bool:
 MAX_DURATION_SECONDS = 600   # 10 minutes
 MAX_FILESIZE_BYTES = 150 * 1024 * 1024  # 150 MB
 
-# yt-dlp options that help bypass YouTube bot detection
 YDL_BASE_OPTS = {
     'quiet': False,
     'no_warnings': False,
-    'extractor_args': {
-        'youtube': {
-            'player_client': ['web', 'android', 'tv_embedded'],
-        }
-    },
 }
 
 def _cookie_file():

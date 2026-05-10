@@ -363,18 +363,6 @@
   border: 1px solid var(--ios-border);
 }
 
-.ios-plain-link {
-  color: var(--ios-accent);
-  text-decoration: none;
-  word-break: break-all;
-  font-size: 18px;
-  line-height: 1.65;
-}
-
-.ios-plain-link:hover {
-  text-decoration: underline;
-}
-
 .ios-link-item {
   display: flex;
   flex-direction: column;
