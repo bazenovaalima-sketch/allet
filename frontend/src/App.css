@@ -467,7 +467,17 @@
   }
 
   .ios-video-card {
-    max-width: 100%;
+    max-width: 58%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .ios-video-body {
+    max-height: 320px;
+  }
+
+  .ios-video-element {
+    max-height: 320px;
   }
 
   .ios-app-branding {
