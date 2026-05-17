@@ -1,0 +1,6 @@
+packages:
+  - '.'
+
+# 10,080 minutes = 7 days cooling-off window (TanStack-style supply chain protection)
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true

@@ -11,7 +11,7 @@ BACKEND_PID=$!
 
 echo "Запуск фронтенда..."
 cd frontend
-npm run dev -- --host &
+pnpm run dev -- --host &
 FRONTEND_PID=$!
 
 echo "-----------------------------------"
