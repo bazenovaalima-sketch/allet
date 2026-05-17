@@ -1,101 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './api';
-import type { Category, Note, Attachment } from './api';
+import type { Category, Note } from './api';
+import { NoteEditor } from './components/NoteEditor';
+import { PasscodeScreen } from './components/PasscodeScreen';
+import { Sidebar } from './components/Sidebar';
+import { AUTH_KEY, URL_REGEX } from './constants';
 import './App.css';
-
-const URL_REGEX = /(https?:\/\/(?:[a-z0-9-]+\.)?(?:instagram\.com|instagr\.am|tiktok\.com)[^\s\n\r]*)(?=[\s\n\r]|$)/gi;
-
-const PASSCODE = '7700';
-const AUTH_KEY = 'allet_auth';
-
-function PasscodeScreen({ onAuth }: { onAuth: () => void }) {
-  const [value, setValue] = useState('');
-  const [error, setError] = useState(false);
-
-  const submit = () => {
-    if (value === PASSCODE) {
-      localStorage.setItem(AUTH_KEY, '1');
-      onAuth();
-    } else {
-      setError(true);
-      setValue('');
-      setTimeout(() => setError(false), 1200);
-    }
-  };
-
-  return (
-    <div className="passcode-screen">
-      <div className="passcode-card">
-        <div className="passcode-logo">Allet</div>
-        <p className="passcode-welcome">Welcome back</p>
-        <input
-          className={`passcode-input ${error ? 'passcode-error' : ''}`}
-          type="password"
-          inputMode="numeric"
-          maxLength={8}
-          placeholder="Введи код"
-          value={value}
-          autoFocus
-          onChange={e => setValue(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && submit()}
-        />
-        {error && <p className="passcode-hint">Неверный код</p>}
-        <button className="passcode-btn" onClick={submit}>Войти</button>
-      </div>
-    </div>
-  );
-}
-
-// Simple SVG Icons
-const IconFolder = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-  </svg>
-);
-
-const IconPlus = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19"></line>
-    <line x1="5" y1="12" x2="19" y2="12"></line>
-  </svg>
-);
-
-const IconNote = () => (
-  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-    <polyline points="14 2 14 8 20 8"></polyline>
-  </svg>
-);
-
-const IconEdit = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-  </svg>
-);
-
-const VideoItem = React.memo(({ attachment, onDelete }: { attachment: Attachment, onDelete: (id: number, url: string) => void }) => {
-  return (
-    <div className="ios-video-card" key={attachment.id}>
-      <div className="ios-video-header">
-        <span className="ios-video-url">{attachment.original_url}</span>
-        <button className="ios-video-delete" onClick={() => onDelete(attachment.id, attachment.original_url)}>×</button>
-      </div>
-      <div className="ios-video-body">
-        {attachment.status === 'completed' && attachment.local_path ? (
-          <video controls playsInline className="ios-video-element">
-            <source src={attachment.local_path} type="video/mp4" />
-          </video>
-        ) : (
-          <div className="ios-video-loading">
-            <div className="ios-spinner"></div>
-            <span>{attachment.status === 'failed' ? 'Ошибка' : 'Загрузка видео...'}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
 
 function App() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -111,22 +21,28 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const textareaRefs = useRef<{[key: number]: HTMLTextAreaElement | null}>({});
+  const textareaRefs = useRef<{ [key: number]: HTMLTextAreaElement | null }>({});
   const pendingNoteTitle = useRef<string | null>(null);
 
-  useEffect(() => { fetchCategories(); }, []);
-  useEffect(() => { if (selectedCategoryId) loadNote(selectedCategoryId); }, [selectedCategoryId]);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const res = await api.getCategories();
       setCategories(res.data);
-    } catch (e) { console.error(e); }
-  };
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
 
-  const loadNote = async (catId: number) => {
+  const updateNoteState = useCallback((newNote: Note) => {
+    setCurrentNote(prev => {
+      if (!prev || prev.id !== newNote.id) return prev;
+      return { ...newNote };
+    });
+  }, []);
+
+  const loadNote = useCallback(async (categoryId: number) => {
     try {
-      const res = await api.getNotes(catId);
+      const res = await api.getNotes(categoryId);
       if (res.data.length > 0) {
         const note = res.data[0];
         setCurrentNote(note);
@@ -135,21 +51,31 @@ function App() {
       } else {
         const title = pendingNoteTitle.current || 'Без названия';
         pendingNoteTitle.current = null;
-        const newNote = await api.syncNote({ title, content: '', category_id: catId });
+        const newNote = await api.syncNote({ title, content: '', category_id: categoryId });
         setCurrentNote(newNote.data);
         setLocalTitle(title);
         setLocalContent('');
       }
       setSaveStatus('saved');
-    } catch (e) { console.error(e); }
-  };
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
 
-  const updateNoteState = (newNote: Note) => {
-    setCurrentNote(prev => {
-      if (!prev || prev.id !== newNote.id) return prev;
-      return { ...newNote };
-    });
-  };
+  useEffect(() => {
+    const run = async () => {
+      await fetchCategories();
+    };
+    void run();
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    if (!selectedCategoryId) return;
+    const run = async () => {
+      await loadNote(selectedCategoryId);
+    };
+    void run();
+  }, [loadNote, selectedCategoryId]);
 
   useEffect(() => {
     if (!selectedCategoryId || !currentNote) return;
@@ -162,35 +88,45 @@ function App() {
         const res = await api.syncNote({ title: localTitle, content: localContent, category_id: selectedCategoryId });
         updateNoteState(res.data);
         setSaveStatus('saved');
-        // If title changed, refresh categories to update sidebar name
-        if (localTitle !== currentNote.title) {
-          fetchCategories();
-        }
-      } catch (e) { setSaveStatus('error'); }
+        if (localTitle !== currentNote.title) fetchCategories();
+      } catch (error) {
+        console.error(error);
+        setSaveStatus('error');
+      }
     }, 1000);
-    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
-  }, [localTitle, localContent, currentNote, selectedCategoryId]);
+
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [currentNote, fetchCategories, localContent, localTitle, selectedCategoryId, updateNoteState]);
+
+  const currentNoteId = currentNote?.id;
+  const hasPendingAttachment = currentNote?.attachments.some(
+    attachment => attachment.status !== 'completed' && attachment.status !== 'failed',
+  );
 
   useEffect(() => {
-    const hasPending = currentNote?.attachments.some(a => a.status !== 'completed' && a.status !== 'failed');
-    if (!hasPending || !currentNote) return;
+    if (!hasPendingAttachment || !currentNoteId) return;
+
     const interval = setInterval(async () => {
       try {
-        const res = await api.getNote(currentNote.id);
+        const res = await api.getNote(currentNoteId);
         updateNoteState(res.data);
-      } catch (e) {}
+      } catch (error) {
+        console.error(error);
+      }
     }, 3000);
+
     return () => clearInterval(interval);
-  }, [currentNote?.attachments, currentNote?.id]);
+  }, [currentNoteId, hasPendingAttachment, updateNoteState]);
 
   useEffect(() => {
-    Object.values(textareaRefs.current).forEach(el => {
-      if (el) {
-        el.style.height = 'auto';
-        el.style.height = el.scrollHeight + 'px';
-      }
+    Object.values(textareaRefs.current).forEach(textarea => {
+      if (!textarea) return;
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
     });
-  }, [currentNote?.id]);
+  }, [currentNoteId]);
 
   const visibleCategories = useMemo(() => {
     const sorted = [...categories].sort((a, b) => {
@@ -199,34 +135,59 @@ function App() {
       return bTime - aTime;
     });
     if (!searchQuery.trim()) return sorted;
-    return sorted.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    return sorted.filter(category => category.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [categories, searchQuery]);
 
-  const parts = useMemo(() => {
+  const contentParts = useMemo(() => {
     const raw = localContent.split(URL_REGEX);
-    return raw.map((p, i) => {
-      const prevIsUrl = i > 0 && /^https?:\/\//.test(raw[i - 1]);
-      return prevIsUrl && p === '' ? '\n' : p;
+    return raw.map((part, index) => {
+      const prevIsUrl = index > 0 && /^https?:\/\//.test(raw[index - 1]);
+      return prevIsUrl && part === '' ? '\n' : part;
     });
   }, [localContent]);
 
-  const handleTextChange = (index: number, val: string) => {
-    const newParts = [...parts];
+  const handleTextChange = useCallback((index: number, value: string) => {
+    const newParts = [...contentParts];
     const prevIsUrl = index > 0 && /^https?:\/\//.test(newParts[index - 1]);
-    newParts[index] = prevIsUrl && val && !/^\s/.test(val) ? '\n' + val : val;
+    newParts[index] = prevIsUrl && value && !/^\s/.test(value) ? `\n${value}` : value;
     setLocalContent(newParts.join(''));
-  };
+  }, [contentParts]);
 
-  const handleDeleteVideo = async (attachmentId: number, url: string) => {
+  const handleCreateCategory = useCallback(async (name: string) => {
+    try {
+      pendingNoteTitle.current = name;
+      const res = await api.createCategory(name);
+      setIsAddingCategory(false);
+      fetchCategories();
+      setSelectedCategoryId(res.data.id);
+      setMobileView('note');
+    } catch (error) {
+      console.error(error);
+    }
+  }, [fetchCategories]);
+
+  const handleDeleteCategory = useCallback(async (id: number) => {
+    if (!window.confirm('Удалить?')) return;
+    try {
+      await api.deleteCategory(id);
+      fetchCategories();
+      if (selectedCategoryId === id) setSelectedCategoryId(null);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [fetchCategories, selectedCategoryId]);
+
+  const handleDeleteVideo = useCallback(async (attachmentId: number, url: string) => {
     if (!window.confirm('Удалить это видео?')) return;
     try {
       await api.deleteAttachment(attachmentId);
-      const newContent = localContent.replace(url, '').trim();
-      setLocalContent(newContent);
-    } catch (e) { console.error(e); }
-  };
+      setLocalContent(content => content.replace(url, '').trim());
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
 
-  const handleUpdateCategory = async (id: number) => {
+  const handleUpdateCategory = useCallback(async (id: number) => {
     if (!editName.trim()) {
       setEditingCategoryId(null);
       return;
@@ -234,188 +195,52 @@ function App() {
     try {
       await api.updateCategory(id, editName);
       setEditingCategoryId(null);
-      // If we are currently viewing this category, update the local title too
-      if (id === selectedCategoryId) {
-        setLocalTitle(editName);
-      }
+      if (id === selectedCategoryId) setLocalTitle(editName);
       fetchCategories();
-    } catch (e) { console.error(e); }
-  };
-
-  const startEditing = (e: React.MouseEvent, c: Category) => {
-    e.stopPropagation();
-    setEditingCategoryId(c.id);
-    setEditName(c.name);
-  };
+    } catch (error) {
+      console.error(error);
+    }
+  }, [editName, fetchCategories, selectedCategoryId]);
 
   return (
     <div className={`ios-container ${mobileView === 'note' ? 'mobile-note' : 'mobile-list'}`}>
-      <div className="ios-sidebar">
-        <div className="ios-app-branding">Allet</div>
-        <div className="ios-sidebar-header">
-          <h1>Заметки</h1>
-          <button className="ios-add-btn" onClick={() => setIsAddingCategory(true)}>
-            <IconPlus />
-          </button>
-        </div>
+      <Sidebar
+        categories={visibleCategories}
+        selectedCategoryId={selectedCategoryId}
+        isAddingCategory={isAddingCategory}
+        editingCategoryId={editingCategoryId}
+        editName={editName}
+        searchQuery={searchQuery}
+        onAddStart={() => setIsAddingCategory(true)}
+        onAddingBlur={() => setIsAddingCategory(false)}
+        onCreateCategory={handleCreateCategory}
+        onDeleteCategory={handleDeleteCategory}
+        onEditCancel={() => setEditingCategoryId(null)}
+        onEditNameChange={setEditName}
+        onEditStart={category => {
+          setEditingCategoryId(category.id);
+          setEditName(category.name);
+        }}
+        onSearchChange={setSearchQuery}
+        onSelectCategory={id => {
+          setSelectedCategoryId(id);
+          setMobileView('note');
+        }}
+        onUpdateCategory={handleUpdateCategory}
+      />
 
-        <div className="ios-search-container">
-          <input
-            className="ios-search-input"
-            placeholder="Поиск..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        {isAddingCategory && (
-          <div className="ios-cat-input-container">
-            <input 
-              autoFocus 
-              className="ios-cat-input"
-              placeholder="Новая заметка"
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  const name = e.currentTarget.value.trim();
-                  if (!name) return;
-                  pendingNoteTitle.current = name;
-                  api.createCategory(name).then(res => {
-                    setIsAddingCategory(false);
-                    fetchCategories();
-                    setSelectedCategoryId(res.data.id);
-                    setMobileView('note');
-                  });
-                }
-              }}
-              onBlur={() => setIsAddingCategory(false)}
-            />
-          </div>
-        )}
-
-        <div className="ios-cat-list">
-          {visibleCategories.map(c => (
-            <div 
-              key={c.id} 
-              className={`ios-cat-item ${selectedCategoryId === c.id ? 'active' : ''}`}
-              onClick={() => { setSelectedCategoryId(c.id); setMobileView('note'); }}
-            >
-              {editingCategoryId === c.id ? (
-                <input 
-                  autoFocus
-                  className="ios-cat-input"
-                  value={editName}
-                  onChange={e => setEditName(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleUpdateCategory(c.id);
-                    }
-                    if (e.key === 'Escape') setEditingCategoryId(null);
-                  }}
-                  onBlur={() => handleUpdateCategory(c.id)}
-                  onClick={e => e.stopPropagation()}
-                />
-              ) : (
-                <>
-                  <div className="ios-cat-content">
-                    <span className="ios-icon">
-                      <IconFolder />
-                    </span>
-                    <span className="ios-cat-name">{c.name}</span>
-                  </div>
-                  <div className="ios-cat-actions">
-                    <button className="ios-cat-edit-btn" onClick={(e) => startEditing(e, c)}>
-                      <IconEdit />
-                    </button>
-                    <button className="ios-cat-delete" onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm('Удалить?')) api.deleteCategory(c.id).then(() => {
-                        fetchCategories();
-                        if (selectedCategoryId === c.id) setSelectedCategoryId(null);
-                      });
-                    }}>×</button>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="ios-note-view" onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          const lastTextIdx = parts.length - 1;
-          textareaRefs.current[lastTextIdx]?.focus();
-        }
-      }}>
-        {!selectedCategoryId ? (
-          <div className="ios-empty-state">
-            <span className="ios-empty-icon">
-              <IconNote />
-            </span>
-            <p>Выберите заметку</p>
-          </div>
-        ) : (
-          <div className="ios-note-sheet">
-            <div className="ios-note-toolbar">
-              <button className="ios-back-btn" onClick={() => setMobileView('list')}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-                Заметки
-              </button>
-              <div className={`ios-save-indicator ${saveStatus}`}>
-                {saveStatus === 'saving' ? 'Сохранение...' : 'Сохранено'}
-              </div>
-            </div>
-            
-            <input 
-              className="ios-note-title" 
-              value={localTitle} 
-              onChange={e => setLocalTitle(e.target.value)} 
-              placeholder="Заголовок" 
-            />
-
-            <div className="ios-note-flow">
-              {parts.map((part, index) => {
-                const isUrl = /^https?:\/\//.test(part);
-                if (isUrl) {
-                  const url = part.trim();
-                  const att = currentNote?.attachments.find(a => a.original_url === url);
-                  if (!att) return <div key={index} className="ios-video-pending-bar">Поиск...</div>;
-                  if (att.status === 'too_long') {
-                    return (
-                      <div key={att.id} className="ios-link-item">
-                        <a href={att.original_url} target="_blank" rel="noopener noreferrer" className="ios-link-url">
-                          {att.original_url}
-                        </a>
-                        <span className="ios-link-note">Видео слишком длинное — откройте по ссылке</span>
-                      </div>
-                    );
-                  }
-                  return <VideoItem key={att.id} attachment={att} onDelete={handleDeleteVideo} />;
-                } else {
-                  return (
-                    <textarea
-                      key={index}
-                      ref={el => { textareaRefs.current[index] = el; }}
-                      className="ios-textarea"
-                      value={part}
-                      onChange={(e) => handleTextChange(index, e.target.value)}
-                      placeholder={index === 0 ? "Начните писать..." : ""}
-                      onInput={(e) => {
-                        const t = e.target as HTMLTextAreaElement;
-                        t.style.height = 'auto';
-                        t.style.height = t.scrollHeight + 'px';
-                      }}
-                    />
-                  );
-                }
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+      <NoteEditor
+        selectedCategoryId={selectedCategoryId}
+        title={localTitle}
+        contentParts={contentParts}
+        attachments={currentNote?.attachments ?? []}
+        saveStatus={saveStatus}
+        textareaRefs={textareaRefs}
+        onBack={() => setMobileView('list')}
+        onDeleteVideo={handleDeleteVideo}
+        onTextChange={handleTextChange}
+        onTitleChange={setLocalTitle}
+      />
     </div>
   );
 }
